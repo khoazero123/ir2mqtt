@@ -1,0 +1,12 @@
+{
+  global:
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_createLuaState;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_releaseLuaState;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_runLuaScript;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_setLuaGlobalNumberVariable;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_setLuaGlobalArrayBufferVariable;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_setLuaGlobalNumberMapVariable;
+    Java_com_hzy_tvmao_ir_encode_CodeHelper_getLuaGlobalArrayBufferVariable;
+  local:
+    *;
+};

@@ -1,0 +1,10 @@
+# Keep the build context small; kksdk-src/data/kkoffline.db IS needed (copied
+# into the runtime image), the rest of the vendor tree is copied selectively in
+# the Dockerfile.
+**/.git
+**/node_modules
+**/__pycache__
+**/*.pyc
+backend/tests
+frontend/dist
+frontend/node_modules

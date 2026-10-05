@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / frontend build output
+node_modules/
+frontend/dist/
+dist/
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
+# Local env
+.env
+.env.*
