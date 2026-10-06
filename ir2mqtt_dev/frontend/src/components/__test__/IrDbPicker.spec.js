@@ -51,7 +51,7 @@ describe('IrDbPicker', () => {
 
     await wrapper.find('button.btn-primary').trigger('click');
 
-    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: true, kookong: true });
+    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: true });
   });
 
   it('browses the database', async () => {

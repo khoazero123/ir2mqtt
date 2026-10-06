@@ -528,6 +528,9 @@ export default {
         remotes: 'Remotes:',
         codesTooltip: 'Codes:',
         updated: 'Updated:',
+        kookong: 'Kookong:',
+        kookongLazy: 'on-demand',
+        kookongOff: 'unavailable',
     },
     irdb: {
         title: 'IR Database',
@@ -551,6 +554,7 @@ export default {
         flipperZero: 'Flipper Zero IRDB',
         probono: 'Probono IRDB',
         kookong: 'Kookong IRDB (OnePlus/OPPO)',
+        kookongLazy: 'Kookong: on-demand (read straight from the offline DB, keys get decoded only when you open a remote).',
     },
     confirm: {
         cancel: 'Yeah nah',

@@ -272,11 +272,19 @@ class StopLoopbackTestResponse(BaseModel):
     status: str = "stopping"
 
 
+class IrDbKookongStatus(BaseModel):
+    """Kookong is read on demand from the offline DB — never bulk-imported."""
+    lazy: bool = True
+    available: bool = False
+    total_remotes: int = 0
+    total_categories: int = 0
+
 class IrDbStatusResponse(BaseModel):
     exists: bool
     total_remotes: int
     total_codes: int
     last_updated: int | None
+    kookong: IrDbKookongStatus | None = None
 
 
 class SendIrDbCodeResponse(BaseModel):
@@ -330,6 +338,9 @@ class IrDbBrowseResponse(BaseModel):
     name: str
     type: str
     path: str
+    # Number of remotes inside a directory (only the lazy Kookong provider
+    # reports it; omitted for imported providers so the old shape is unchanged).
+    count: int | None = None
 
 
 class IrDbSearchResponse(BaseModel):

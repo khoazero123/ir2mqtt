@@ -65,7 +65,7 @@ async def update_irdb(
         raise HTTPException(500, f"Update failed: {str(e)}") from e
 
 
-@router.get("/irdb/browse", response_model=list[IrDbBrowseResponse])
+@router.get("/irdb/browse", response_model=list[IrDbBrowseResponse], response_model_exclude_none=True)
 async def browse_irdb(
     irdb_manager: IrDbManagerDep,
     logger: LoggerDep,

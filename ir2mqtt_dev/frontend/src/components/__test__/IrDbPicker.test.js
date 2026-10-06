@@ -80,20 +80,21 @@ describe('IrDbPicker.vue', () => {
     });
 
     const downloadButton = wrapper.find('.btn-primary');
-    expect(downloadButton.attributes('disabled')).toBeUndefined();
+    // Nothing selected yet: Kookong has no switch (it is on-demand), so the
+    // button starts disabled until Flipper or Probono is enabled.
+    expect(downloadButton.attributes('disabled')).toBeDefined();
 
     const switches = wrapper.findAllComponents(Switch);
-    expect(switches.length).toBe(3);
+    expect(switches.length).toBe(2);
 
     // Enable Flipper Zero IRDB
     await switches[0].vm.$emit('update:modelValue', true);
     await wrapper.vm.$nextTick();
     expect(downloadButton.attributes('disabled')).toBeUndefined();
 
-    // Disable all
+    // Disable all (Kookong is on-demand and has no switch any more)
     await switches[0].vm.$emit('update:modelValue', false);
     await switches[1].vm.$emit('update:modelValue', false);
-    await switches[2].vm.$emit('update:modelValue', false);
     await wrapper.vm.$nextTick();
     expect(downloadButton.attributes('disabled')).toBeDefined();
 
@@ -116,7 +117,7 @@ describe('IrDbPicker.vue', () => {
     await switches[1].vm.$emit('update:modelValue', false); 
     await wrapper.find('.btn-primary').trigger('click');
 
-    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: false, kookong: true });
+    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: false });
   });
 
   it('displays update options when "Update DBs" is clicked', async () => {
@@ -132,7 +133,7 @@ describe('IrDbPicker.vue', () => {
     expect(wrapper.find('[data-tour-id="irdb-update-options-overlay"]').exists()).toBe(true); 
 
     await wrapper.find('[data-tour-id="irdb-confirm-update-btn"]').trigger('click'); 
-    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: true, kookong: true }); 
+    expect(irdbStore.updateIrdb).toHaveBeenCalledWith({ flipper: true, probono: true }); 
     expect(wrapper.find('[data-tour-id="irdb-update-options-overlay"]').exists()).toBe(false); 
   });
 

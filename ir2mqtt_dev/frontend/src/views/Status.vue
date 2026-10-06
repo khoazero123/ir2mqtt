@@ -115,6 +115,8 @@ const lastUpdated = computed(() => {
           <span class="text-right">{{ irdbStatus.total_remotes }}</span>
           <span class="font-semibold text-gray-400">{{ t('status.codesTooltip') }}</span>
           <span class="text-right">{{ irdbStatus.total_codes }}</span>
+          <span class="font-semibold text-gray-400">{{ t('status.kookong') }}</span>
+          <span class="text-right">{{ irdbStatus.kookong?.available ? t('status.kookongLazy') : t('status.kookongOff') }}</span>
           <span class="font-semibold text-gray-400">{{ t('status.updated') }}</span>
           <span class="text-right">{{ lastUpdated }}</span>
         </div>

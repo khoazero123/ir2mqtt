@@ -10,6 +10,14 @@ export interface IrdbStatus {
     total_remotes?: number;
     total_codes?: number;
     last_updated?: string;
+    // Kookong is never imported any more — it is read on demand from the
+    // offline DB shipped with the add-on.
+    kookong?: {
+        lazy: boolean;
+        available: boolean;
+        total_remotes: number;
+        total_categories: number;
+    } | null;
 }
 
 export interface IrdbProgress {
@@ -33,6 +41,7 @@ export interface IrDbItem {
     name: string;
     path: string;
     type?: 'file' | 'dir';
+    count?: number | null;
 }
 
 export const useIrdbStore = defineStore('irdb', () => {
@@ -43,7 +52,7 @@ export const useIrdbStore = defineStore('irdb', () => {
 
     const fetchIrdbStatus = () => api<IrdbStatus>('irdb/status').then(data => irdbStatus.value = data || { exists: false });
     
-    const updateIrdb = async (options = { flipper: true, probono: true, kookong: true }) => {
+    const updateIrdb = async (options = { flipper: true, probono: true }) => {
         try {
             await api('irdb/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(options) });
         } catch {

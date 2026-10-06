@@ -528,6 +528,9 @@ export default {
         remotes: 'Пульты:',
         codesTooltip: 'Коды:',
         updated: 'Обновлено:',
+        kookong: 'Kookong:',
+        kookongLazy: 'по требованию',
+        kookongOff: 'недоступно',
     },
     irdb: {
         title: 'База данных IR DB',
@@ -551,6 +554,7 @@ export default {
         flipperZero: 'Flipper Zero IRDB',
         probono: 'Probono IRDB',
         kookong: 'Kookong IRDB (OnePlus/OPPO)',
+        kookongLazy: 'Kookong: по требованию (читается из офлайн-базы, коды декодируются только при открытии пульта).',
     },
     confirm: {
         cancel: 'Отмена',

@@ -528,6 +528,9 @@ export default {
         remotes: 'Telecomandi:',
         codesTooltip: 'Codici:',
         updated: 'Aggiornato:',
+        kookong: 'Kookong:',
+        kookongLazy: 'on-demand',
+        kookongOff: 'non disponibile',
     },
     irdb: {
         title: 'Database IR',
@@ -551,6 +554,7 @@ export default {
         flipperZero: 'Flipper Zero IRDB',
         probono: 'Probono IRDB',
         kookong: 'Kookong IRDB (OnePlus/OPPO)',
+        kookongLazy: 'Kookong: on-demand (letto dal database offline, i tasti vengono decodificati solo quando apri un telecomando).',
     },
     confirm: {
         cancel: 'Annulla',

@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import logging
+import os
 import pkgutil
 from pathlib import Path
 
@@ -24,12 +25,98 @@ logger = logging.getLogger("ir2mqtt")
 # more (still batched) SQLite statements.
 DB_INSERT_CHUNK = 200
 
+# Kookong is no longer imported into the app database; it is browsed and decoded
+# straight from the bundled offline DB (see backend/kookong/irdb_index.py).
+# Hosts that already ran the old bulk import get their rows purged once at
+# startup, guarded by this marker so the (potentially slow) delete runs once.
+KOOKONG_LAZY_MARKER = "/data/.kookong_lazy_v1"
+
 
 class IrDbManager:
     def __init__(self):
         self.providers: list[IrRepoProvider] = []
         self._load_providers()
         self._last_updated: int | None = None
+        self._kookong_index = None
+        self._kookong_loaded = False
+
+    # ------------------------------------------------------------- lazy Kookong
+
+    def _get_kookong_index(self):
+        """The lazy Kookong index, or None when it cannot be loaded.
+
+        Imported on first use so a broken/missing Kookong module never stops the
+        other providers from working.
+        """
+        if not self._kookong_loaded:
+            self._kookong_loaded = True
+            try:
+                from .kookong.irdb_index import get_irdb_index
+
+                self._kookong_index = get_irdb_index()
+            except Exception as e:
+                logger.error("Kookong lazy index not available: %s", e)
+                self._kookong_index = None
+        return self._kookong_index
+
+    def _kookong_available(self) -> bool:
+        index = self._get_kookong_index()
+        if index is None:
+            return False
+        try:
+            return index.available()
+        except Exception:
+            logger.warning("Kookong lazy index availability check failed.", exc_info=True)
+            return False
+
+    def _kookong_list_path(self, subpath: str) -> list[dict] | None:
+        """Serve a ``kookong/...`` browse straight from the offline DB."""
+        index = self._get_kookong_index()
+        if index is None or not self._kookong_available():
+            return None
+        try:
+            parts = [part for part in subpath.strip("/").split("/") if part]
+            if len(parts) == 1:  # "kookong"
+                return index.list_types()
+            if len(parts) == 2:
+                return index.list_brands(parts[1])
+            if len(parts) == 3:
+                return index.list_remotes(parts[1], parts[2])
+            return []  # remote files are leaves, nothing below them
+        except Exception:
+            logger.error("Kookong lazy browse failed for %r.", subpath, exc_info=True)
+            return None
+
+    def _kookong_parse(self, subpath: str) -> list[dict] | None:
+        index = self._get_kookong_index()
+        if index is None:
+            return None
+        try:
+            return index.parse(subpath)
+        except Exception:
+            logger.error("Kookong lazy decode failed for %r.", subpath, exc_info=True)
+            return None
+
+    def _kookong_search(self, query: str, limit: int = 100) -> list[dict]:
+        index = self._get_kookong_index()
+        if index is None or not self._kookong_available():
+            return []
+        try:
+            return index.search(query, limit=limit)
+        except Exception:
+            logger.error("Kookong lazy search failed for %r.", query, exc_info=True)
+            return []
+
+    def _kookong_stats(self) -> dict:
+        index = self._get_kookong_index()
+        empty = {"lazy": True, "available": False, "total_remotes": 0, "total_categories": 0}
+        if index is None:
+            return empty
+        try:
+            return index.stats()
+        except Exception:
+            logger.warning("Could not build Kookong lazy stats.", exc_info=True)
+            return empty
 
     def _load_providers(self):
         providers_pkg = "backend.providers"
@@ -51,9 +138,16 @@ class IrDbManager:
         return get_session_maker()()
 
     async def exists(self) -> bool:
+        """True when there is anything browsable — imported rows *or* Kookong.
+
+        Kookong is lazy, so an otherwise empty app DB is still a usable IRDB as
+        long as the offline database + native library are present.
+        """
         async with self._session() as session:
             count = await session.scalar(select(func.count(IrDbRemote.id)))
-            return (count or 0) > 0
+            if (count or 0) > 0:
+                return True
+        return self._kookong_available()
 
     async def get_stats(self) -> dict:
         async with self._session() as session:
@@ -66,7 +160,73 @@ class IrDbManager:
             "total_codes": total_codes,
             "protocols": protocols,
             "last_updated": self._last_updated,
+            "kookong": self._kookong_stats(),
         }
+
+    async def purge_legacy_kookong_import(self) -> int:
+        """Delete Kookong rows written by the old bulk importer (one-shot).
+
+        The provider is lazy now, so those rows are dead weight (on a real host
+        ~10k remotes / ~300k buttons — the reason the app DB reached 300 MB).
+        Devices and buttons the user created never reference them.  A marker file
+        keeps the delete from running on every startup.
+        """
+        marker = Path(os.environ.get("KKOOKONG_LAZY_MARKER", KOOKONG_LAZY_MARKER))
+        try:
+            if marker.exists():
+                return 0
+        except Exception:
+            logger.debug("Could not stat Kookong marker %s.", marker, exc_info=True)
+
+        removed_remotes = 0
+        removed_buttons = 0
+        try:
+            async with self._session() as session:
+                async with session.begin():
+                    remote_ids = select(IrDbRemote.id).where(
+                        IrDbRemote.provider == "kookong"
+                    )
+                    removed_remotes = await session.scalar(
+                        select(func.count(IrDbRemote.id)).where(
+                            IrDbRemote.provider == "kookong"
+                        )
+                    ) or 0
+                    if removed_remotes:
+                        removed_buttons = await session.scalar(
+                            select(func.count(IrDbButton.id)).where(
+                                IrDbButton.remote_id.in_(remote_ids)
+                            )
+                        ) or 0
+                        await session.execute(
+                            delete(IrDbButton).where(IrDbButton.remote_id.in_(remote_ids))
+                        )
+                        await session.execute(
+                            delete(IrDbRemote).where(IrDbRemote.provider == "kookong")
+                        )
+        except Exception:
+            logger.error("Kookong lazy migration failed.", exc_info=True)
+            return 0
+
+        if removed_remotes:
+            logger.info(
+                "Kookong lazy migration: deleted %d imported remotes / %d buttons "
+                "(the provider is now on-demand).",
+                removed_remotes,
+                removed_buttons,
+            )
+        else:
+            logger.info("Kookong lazy migration: no imported Kookong rows to delete.")
+
+        try:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
+        except Exception:
+            logger.warning(
+                "Kookong lazy migration: could not write marker %s (will re-check next start).",
+                marker,
+                exc_info=True,
+            )
+        return removed_remotes
 
     async def delete_db(self):
         logger.info("Deleting IR database...")
@@ -183,11 +343,9 @@ class IrDbManager:
             if p:
                 providers_to_update.append(p)
         if kookong:
-            p = get_provider("kookong")
-            if p:
-                providers_to_update.append(p)
-            else:
-                logger.warning("Kookong provider requested but not loaded.")
+            # Kookong is lazy: there is nothing to import.  The flag stays for
+            # API compatibility; make the no-op explicit in the log.
+            logger.info("[kookong] kookong is lazy, nothing to import.")
 
         total_providers = len(providers_to_update)
 
@@ -247,16 +405,52 @@ class IrDbManager:
             rows = await session.execute(stmt)
             results = [{"path": r.path, "name": r.name, "provider": r.provider} for r in rows]
 
+        # Merge the on-demand Kookong matches (its rows never live in this DB).
+        merged: dict[str, dict] = {r["path"]: r for r in results}
+        for item in self._kookong_search(query):
+            merged.setdefault(item["path"], item)
+        results = list(merged.values())
+
         q_lower = query.lower()
-        results.sort(key=lambda x: 0 if x["name"].lower() == q_lower else (1 if x["name"].lower().startswith(q_lower) else 2))
-        return results
+        results.sort(
+            key=lambda x: (
+                0 if x["name"].lower() == q_lower
+                else (1 if x["name"].lower().startswith(q_lower) else 2),
+                x["name"].lower(),
+            )
+        )
+        return results[:100]
 
     async def list_path(self, subpath: str = "") -> list[dict]:
+        if subpath == "kookong" or subpath.startswith("kookong/"):
+            lazy = self._kookong_list_path(subpath)
+            if lazy is not None:
+                return lazy
+
         async with self._session() as session:
             if not subpath:
                 rows = await session.execute(select(IrDbRemote.provider).distinct())
                 providers_in_db = {r[0] for r in rows}
-                return [{"name": p.name, "type": "dir", "path": p.id} for p in self.providers if p.id in providers_in_db]
+                items: list[dict] = []
+                for p in self.providers:
+                    if p.id == "kookong":
+                        # Lazy provider: listed even with zero rows in the app DB.
+                        if self._kookong_available():
+                            stats = self._kookong_stats()
+                            items.append(
+                                {
+                                    "name": p.name,
+                                    "type": "dir",
+                                    "path": p.id,
+                                    "count": stats.get("total_remotes"),
+                                }
+                            )
+                        elif p.id in providers_in_db:
+                            items.append({"name": p.name, "type": "dir", "path": p.id})
+                        continue
+                    if p.id in providers_in_db:
+                        items.append({"name": p.name, "type": "dir", "path": p.id})
+                return items
 
             prefix = subpath.rstrip("/") + "/"
             rows = await session.execute(select(IrDbRemote.path, IrDbRemote.name).where(IrDbRemote.path.like(f"{prefix}%")))
@@ -279,6 +473,11 @@ class IrDbManager:
         return items
 
     async def parse_file(self, subpath: str) -> list[dict]:
+        if subpath == "kookong" or subpath.startswith("kookong/"):
+            lazy = self._kookong_parse(subpath)
+            if lazy is not None:
+                return lazy
+
         async with self._session() as session:
             remote_id = await session.scalar(select(IrDbRemote.id).where(IrDbRemote.path == subpath))
             if remote_id is None:

@@ -528,6 +528,9 @@ export default {
         remotes: 'Remotes:',
         codesTooltip: 'Codes:',
         updated: 'Last Updated:',
+        kookong: 'Kookong:',
+        kookongLazy: 'on-demand',
+        kookongOff: 'unavailable',
     },
     irdb: {
         title: 'Telly Remote Vault',
@@ -551,6 +554,7 @@ export default {
         flipperZero: 'Flipper Zero IRDB (the little hacker)',
         probono: 'Probono IRDB (free is good)',
         kookong: 'Kookong IRDB (OnePlus/OPPO)',
+        kookongLazy: 'Kookong: on-demand (read straight from the offline DB, keys get decoded only when you open a remote).',
     },
     confirm: {
         cancel: 'Nah, bottle it',

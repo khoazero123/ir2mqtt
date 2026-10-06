@@ -66,6 +66,14 @@ async def lifespan(app: FastAPI):
 
     logger.info("Initializing database...")
     await init_db()
+
+    # One-shot: drop any rows the old bulk Kookong import left behind (the
+    # provider is lazy now, so they are dead weight).
+    try:
+        await irdb_manager.purge_legacy_kookong_import()
+    except Exception as e:
+        logger.error("Kookong lazy migration error: %s", e, exc_info=True)
+
     automation_manager.start()
 
     logger.info("Loading data from database...")

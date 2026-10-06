@@ -47,7 +47,6 @@ const searchResults = ref<IrDbItem[]>([]);
 const showUpdateOptions = ref(false);
 const updateFlipper = ref(false);
 const updateProbono = ref(false);
-const updateKookong = ref(true);
 
 const multiSelection = ref(new Set<number>());
 const sendTargets = ref<string[]>([]);
@@ -190,7 +189,8 @@ const importSelection = () => {
 };
 
 const startUpdate = () => {
-    irdbStore.updateIrdb({ flipper: updateFlipper.value, probono: updateProbono.value, kookong: updateKookong.value });
+    // Kookong is on-demand and is never imported, so it is not part of the sync.
+    irdbStore.updateIrdb({ flipper: updateFlipper.value, probono: updateProbono.value });
     showUpdateOptions.value = false;
 };
 
@@ -225,7 +225,6 @@ watch(showUpdateOptions, (isShown) => {
   if (isShown) {
     updateFlipper.value = true;
     updateProbono.value = true;
-    updateKookong.value = true;
   }
 });
 
@@ -352,15 +351,14 @@ onUnmounted(() => {
               <span>{{ t('irdb.probono') }}</span>
               <Switch v-model="updateProbono" />
             </label>
-            <label class="flex items-center justify-between cursor-pointer">
-              <span>{{ t('irdb.kookong') }}</span>
-              <Switch v-model="updateKookong" />
-            </label>
+            <p class="text-[11px] leading-snug text-gray-500 pt-1 border-t border-gray-700">
+              {{ t('irdb.kookongLazy') }}
+            </p>
           </div>
 
           <button
             class="btn btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="!updateFlipper && !updateProbono && !updateKookong"
+            :disabled="!updateFlipper && !updateProbono"
             data-tour-id="irdb-download-button"
             @click="startUpdate"
           >
@@ -386,11 +384,10 @@ onUnmounted(() => {
                 <span>{{ t('irdb.probono') }}</span>
                 <Switch v-model="updateProbono" />
               </label>
-              <label class="flex items-center justify-between p-2 rounded hover:bg-gray-800 cursor-pointer">
-                <span>{{ t('irdb.kookong') }}</span>
-                <Switch v-model="updateKookong" />
-              </label>
             </div>
+            <p class="text-[11px] leading-snug text-gray-500 border-t border-gray-700 pt-2">
+              {{ t('irdb.kookongLazy') }}
+            </p>
             <div class="flex justify-end gap-2">
               <button
                 class="btn btn-secondary btn-sm"
@@ -400,7 +397,7 @@ onUnmounted(() => {
               </button>
               <button
                 class="btn btn-primary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!updateFlipper && !updateProbono && !updateKookong"
+                :disabled="!updateFlipper && !updateProbono"
                 data-tour-id="irdb-confirm-update-btn"
                 @click="startUpdate"
               >

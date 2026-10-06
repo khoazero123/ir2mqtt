@@ -529,6 +529,9 @@ export default {
         remotes: 'Fernbedienungen:',
         codesTooltip: 'Codes:',
         updated: 'Aktualisiert:',
+        kookong: 'Kookong:',
+        kookongLazy: 'On-demand',
+        kookongOff: 'nicht verfügbar',
     },
     irdb: {
         title: 'IR Datenbank',
@@ -552,6 +555,7 @@ export default {
         flipperZero: 'Flipper Zero IRDB',
         probono: 'Probono IRDB',
         kookong: 'Kookong IRDB (OnePlus/OPPO)',
+        kookongLazy: 'Kookong: on-demand (aus der Offline-DB geladen, Tasten werden erst beim Öffnen einer Fernbedienung dekodiert).',
     },
     confirm: {
         cancel: 'Abbrechen',
