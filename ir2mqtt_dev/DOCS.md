@@ -53,7 +53,7 @@ that adds:
 
 | Option | Description | Default |
 | --- | --- | --- |
-| `mqtt_broker` | Hostname or IP of your MQTT broker (`core-mosquitto` for the Home Assistant Mosquitto broker) | `10.10.20.104` |
+| `mqtt_broker` | Hostname or IP of your MQTT broker — `core-mosquitto` is the Home Assistant Mosquitto broker add-on | `core-mosquitto` |
 | `mqtt_port` | MQTT broker port | `1883` |
 | `mqtt_user` | MQTT username | *(empty)* |
 | `mqtt_pass` | MQTT password | *(empty)* |

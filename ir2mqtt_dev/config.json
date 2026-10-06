@@ -1,13 +1,12 @@
 {
   "name": "IR2MQTT (dev)",
-  "version": "1.0.5-dev",
+  "version": "1.0.6-dev",
   "slug": "ir2mqtt_dev",
   "description": "IR2MQTT built FROM SOURCE (dev build) \u2014 Web UI for IR bridges: learning, macros, IR databases, MQTT auto-discovery",
   "url": "https://github.com/khoazero123/ir2mqtt",
   "arch": [
     "aarch64",
-    "amd64",
-    "armv7"
+    "amd64"
   ],
   "startup": "application",
   "boot": "auto",
@@ -19,7 +18,7 @@
   "uart": true,
   "udev": true,
   "options": {
-    "mqtt_broker": "10.10.20.104",
+    "mqtt_broker": "core-mosquitto",
     "mqtt_port": 1883,
     "mqtt_user": "",
     "mqtt_pass": "",
@@ -43,5 +42,6 @@
     "kookong_max_keys_per_remote": "int?",
     "kookong_include_ac": "bool?",
     "kookong_ac_remotes": "int?"
-  }
+  },
+  "image": "ghcr.io/khoazero123/ir2mqtt-ha-app"
 }

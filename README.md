@@ -6,7 +6,6 @@
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
-![Supports armv7 Architecture][armv7-shield]
 
 Web UI for IR bridges with learning, macros, IR databases, **Kookong offline
 matching** and MQTT auto-discovery for Home Assistant.
@@ -76,7 +75,6 @@ MIT License — see [LICENSE.md](LICENSE.md).
 
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
-[armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
 [bridge]: https://github.com/steelcuts/ir2mqtt_bridge
 [documentation]: ir2mqtt_dev/DOCS.md
 [issue]: https://github.com/khoazero123/ir2mqtt/issues
