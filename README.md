@@ -78,7 +78,7 @@ MIT License — see [LICENSE.md](LICENSE.md).
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
 [bridge]: https://github.com/steelcuts/ir2mqtt_bridge
-[documentation]: ir2mqtt_dev/README.md
+[documentation]: ir2mqtt_dev/DOCS.md
 [issue]: https://github.com/khoazero123/ir2mqtt/issues
 [license-shield]: https://img.shields.io/github/license/khoazero123/ir2mqtt
 [maintainer]: https://github.com/khoazero123
