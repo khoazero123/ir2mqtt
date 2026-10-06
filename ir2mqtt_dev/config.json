@@ -1,6 +1,6 @@
 {
   "name": "IR2MQTT (dev)",
-  "version": "1.0.6-dev",
+  "version": "1.0.7-dev",
   "slug": "ir2mqtt_dev",
   "description": "IR2MQTT built FROM SOURCE (dev build) \u2014 Web UI for IR bridges: learning, macros, IR databases, MQTT auto-discovery",
   "url": "https://github.com/khoazero123/ir2mqtt",
@@ -26,9 +26,7 @@
     "kookong_brands": "",
     "kookong_max_remotes": 1200,
     "kookong_max_remotes_per_brand": 20,
-    "kookong_max_keys_per_remote": 64,
-    "kookong_include_ac": false,
-    "kookong_ac_remotes": 0
+    "kookong_max_keys_per_remote": 64
   },
   "schema": {
     "mqtt_broker": "str",
@@ -39,9 +37,7 @@
     "kookong_brands": "str?",
     "kookong_max_remotes": "int?",
     "kookong_max_remotes_per_brand": "int?",
-    "kookong_max_keys_per_remote": "int?",
-    "kookong_include_ac": "bool?",
-    "kookong_ac_remotes": "int?"
+    "kookong_max_keys_per_remote": "int?"
   },
   "image": "ghcr.io/khoazero123/ir2mqtt-ha-app"
 }

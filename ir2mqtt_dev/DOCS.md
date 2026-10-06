@@ -62,8 +62,9 @@ that adds:
 | `kookong_max_remotes` | Maximum remotes imported from the Kookong database | `1200` |
 | `kookong_max_remotes_per_brand` | Maximum remotes imported per brand | `20` |
 | `kookong_max_keys_per_remote` | Maximum keys imported per remote | `64` |
-| `kookong_include_ac` | Import air-conditioner remotes from Kookong | `false` |
-| `kookong_ac_remotes` | How many AC remotes to import when enabled | `0` |
+
+Air-conditioner remotes are always imported — there is no option to disable
+them; they count against the caps above like any other device type.
 
 > Importing the full Kookong database is the app's heaviest operation
 > (10k+ remotes / 380k+ buttons). It runs in bounded chunks; on a 4 GB host give

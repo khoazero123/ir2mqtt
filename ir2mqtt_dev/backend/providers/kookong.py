@@ -21,10 +21,11 @@ Configuration (env var, or ``/data/options.json`` key):
 ``KKOOKONG_MAX_REMOTES_PER_BRAND``           per brand cap (default 20)
 ``KKOOKONG_MAX_KEYS_PER_REMOTE``             per remote cap (default 64)
 ``KKOOKONG_MIN_KEYS``                        skip remotes with fewer keys (default 4)
-``KKOOKONG_INCLUDE_AC``                      include air-conditioner remotes (default 0)
-``KKOOKONG_AC_REMOTES``                      AC remotes to expand (default 0)
 ``KKOOKONG_AC_MODES`` / ``KKOOKONG_AC_TEMPS``  AC grid (default ``0,1,2,3,4`` / ``16..30``)
 ``KKOOKONG_AC_INCLUDE_OFF``                  add a "Power Off" button per AC remote
+
+Air-conditioner remotes are **always** imported; there is no option to turn
+that off, and they count against the same caps as every other device type.
 ===========================================  ==========================================
 """
 
@@ -201,10 +202,6 @@ class KookongProvider(IrRepoProvider):
             _cfg_int(("KKOOKONG_MAX_KEYS_PER_REMOTE", "kookong_max_keys_per_remote"), 64)
         )
         self._min_keys = _cfg_int(("KKOOKONG_MIN_KEYS", "kookong_min_keys"), 4)
-        self._include_ac = _cfg_bool(("KKOOKONG_INCLUDE_AC", "kookong_include_ac"), False)
-        self._ac_remotes = _limit(
-            _cfg_int(("KKOOKONG_AC_REMOTES", "kookong_ac_remotes"), 0)
-        )
         self._ac_modes = _cfg_int_list(("KKOOKONG_AC_MODES", "kookong_ac_modes"), DEFAULT_AC_MODES)
         self._ac_temps = _cfg_int_list(("KKOOKONG_AC_TEMPS", "kookong_ac_temps"), DEFAULT_AC_TEMPS)
         self._ac_include_off = _cfg_bool(("KKOOKONG_AC_INCLUDE_OFF", "kookong_ac_include_off"), True)
@@ -221,7 +218,6 @@ class KookongProvider(IrRepoProvider):
             "too_few_keys": 0,
             "no_pulse": 0,
             "encode_failed": 0,
-            "ac_skipped": 0,
             "duplicate_remote": 0,
             "limit_reached": 0,
         }
@@ -348,7 +344,6 @@ class KookongProvider(IrRepoProvider):
                     self._skip_counts["unknown_brand"] += 1
 
             per_brand: dict[tuple[int, str], int] = {}
-            ac_budget = self._ac_remotes
             # A remote is commonly mapped to several brands/device types
             # (white-label), so the same remote_id shows up under multiple
             # folders.  Import each remote once — otherwise the database
@@ -381,12 +376,9 @@ class KookongProvider(IrRepoProvider):
                     continue
                 seen_remotes.add(remote_enc)
 
+                # Air-conditioner remotes are always imported; they only need
+                # the generic caps above (per-brand / total) to stay bounded.
                 is_ac = int(row["type"] or 0) == 2
-                if is_ac:
-                    if not self._include_ac or ac_budget <= 0:
-                        self._skip_counts["ac_skipped"] += 1
-                        continue
-                    ac_budget -= 1
 
                 type_label = DEVICE_TYPE_LABELS.get(device_type_id, f"type{device_type_id}")
                 remote = self._build_remote(con, host, row, brand_name, type_label, is_ac)
