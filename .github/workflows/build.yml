@@ -30,7 +30,7 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.arch }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -38,10 +38,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # aarch64 builds on GitHub's native arm64 runner (no QEMU emulation —
+          # the npm/Vite build is 5-10x faster there than under emulation).
           - arch: aarch64
+            runner: ubuntu-24.04-arm
             platform: linux/arm64
             base: ghcr.io/home-assistant/aarch64-base:3.20
           - arch: amd64
+            runner: ubuntu-latest
             platform: linux/amd64
             base: ghcr.io/home-assistant/amd64-base:3.20
     steps:
@@ -54,7 +58,6 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "add-on version: $version"
 
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to ${{ env.REGISTRY }}
