@@ -14,7 +14,7 @@ Forked from [steelcuts/ir2mqtt-ha-app](https://github.com/steelcuts/ir2mqtt-ha-a
 ## Install
 
 1. Home Assistant → **Settings → Add-ons → Add-on Store**
-2. **⋮ → Repositories** → add `https://github.com/khoazero123/ir2mqtt-ha-app`
+2. **⋮ → Repositories** → add `https://github.com/khoazero123/ir2mqtt`
 3. Install **IR2MQTT (dev)** (slug `ir2mqtt_dev`) — built locally from source
    on first install/rebuild.
 
