@@ -15,7 +15,14 @@ logger = logging.getLogger("ir2mqtt")
 # Large imports (e.g. the Kookong offline DB with 10k+ remotes / 250k+ buttons)
 # must be written in chunks: a single bulk insert blows past SQLite's bound
 # parameter limit and spikes memory.  Keep every write batch bounded.
-DB_INSERT_CHUNK = 1000
+#
+# Measured on the Kookong import (10,981 remotes / 386,181 buttons, max 143
+# buttons/remote, ~12 KB of timings per button): holding 1000 remotes in the
+# write buffer peaked at 500 MB RSS on top of a 56 MB baseline.  A 4 GB host
+# that is already swapping loses the whole add-on to the kernel OOM killer.
+# 200 keeps the same peak at roughly a fifth of that, at the cost of a few
+# more (still batched) SQLite statements.
+DB_INSERT_CHUNK = 200
 
 
 class IrDbManager:
