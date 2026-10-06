@@ -2,7 +2,7 @@
   "name": "IR2MQTT (dev)",
   "version": "1.0.5-dev",
   "slug": "ir2mqtt_dev",
-  "description": "IR2MQTT built FROM SOURCE (dev) \u2014 Web UI for IR bridges: learning, macros, IR databases, MQTT auto-discovery, Kookong offline DB with region-aware ranking, backup & restore",
+  "description": "IR2MQTT built FROM SOURCE (dev build) \u2014 Web UI for IR bridges: learning, macros, IR databases, MQTT auto-discovery",
   "url": "https://github.com/khoazero123/ir2mqtt",
   "arch": [
     "aarch64",
@@ -43,6 +43,5 @@
     "kookong_max_keys_per_remote": "int?",
     "kookong_include_ac": "bool?",
     "kookong_ac_remotes": "int?"
-  },
-  "panel": true
+  }
 }
