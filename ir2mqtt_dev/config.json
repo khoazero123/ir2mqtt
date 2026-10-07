@@ -1,6 +1,6 @@
 {
   "name": "IR2MQTT (dev)",
-  "version": "1.0.8-dev",
+  "version": "1.0.9-dev",
   "slug": "ir2mqtt_dev",
   "description": "IR2MQTT built FROM SOURCE (dev build) \u2014 Web UI for IR bridges: learning, macros, IR databases, MQTT auto-discovery",
   "url": "https://github.com/khoazero123/ir2mqtt",

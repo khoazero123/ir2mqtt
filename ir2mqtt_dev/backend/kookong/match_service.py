@@ -11,6 +11,9 @@ Two things keep this faithful to the original app:
 * **Test codes** are produced by the same native kksdk encoder the app calls
   (``KkHost.encode_ac`` for air conditioners, ``KkHost.encode_pulse`` for the
   rest) — not from whatever happened to be imported into the IR database.
+  *Exception:* Daikin AC remotes.  Those units ignore the Kookong Daikin
+  variant and only react to the ESPHome ``platform: daikin`` frame, so their
+  codes come from :mod:`backend.kookong.ac_native` instead (see that module).
 
 Everything is read on demand from ``kkoffline.db``, so matching works for the
 whole database regardless of which remotes were imported.
@@ -23,12 +26,14 @@ import os
 import sqlite3
 from typing import Any
 
+from ..ir_base import standardize_ir_key
 from ..providers.kookong import (
     DEVICE_TYPE_LABELS,
     KookongProvider,
     _payload_to_timings,
     _signed_timings,
 )
+from .ac_native import daikin_code
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +85,47 @@ AC_SWING_OFF_FUNCTION = 7
 
 _MODE_LABELS = {0: "Auto", 1: "Cool", 2: "Heat", 3: "Fan", 4: "Dry"}
 _WIND_LABELS = {0: "Auto", 1: "Low", 2: "Medium", 3: "High"}
+
+# Kookong AC key model -> native Daikin encoder arguments.  Mode ids are the
+# app's 0..4 (auto/cool/heat/fan/dry) and wind speeds 0..3 (auto/low/medium/
+# high); the Daikin encoder expects ESPHome's names (see ``ac_native``).
+_KK_MODE_TO_DAIKIN = {0: "auto", 1: "cool", 2: "heat", 3: "fan", 4: "dry"}
+_KK_WIND_TO_DAIKIN = {0: "auto", 1: "low", 2: "medium", 3: "high"}
+
+# Brands whose remotes need the native Daikin frame instead of the Kookong
+# bytes.  Some Daikin units ignore the Kookong variant (mode byte 0x40/0x48,
+# fan 0xaf, different fixed frame) but accept the ESPHome ``platform: daikin``
+# frame — verified on real hardware.
+_DAIKIN_BRAND = "daikin"
+
+def is_daikin_name(name: str | None) -> bool:
+    """True for a decrypted brand name of a Daikin remote (case-insensitive)."""
+    if not name:
+        return False
+    key = " ".join(str(name).split()).lower()
+    return key == _DAIKIN_BRAND or key.startswith(f"{_DAIKIN_BRAND} ")
+
+def _daikin_swing(lr_wind_mode: int, ud_wind_mode: int) -> str:
+    """Kookong swing flags -> encoder swing (ud = vertical, lr = horizontal)."""
+    ud = bool(ud_wind_mode)
+    lr = bool(lr_wind_mode)
+    if ud and lr:
+        return "both"
+    if ud:
+        return "vertical"
+    if lr:
+        return "horizontal"
+    return "off"
+
+def _daikin_code_from_state(state: dict) -> dict:
+    """Native Daikin code for a Kookong AC state dict (match wizard model)."""
+    return daikin_code(
+        power=bool(int(state.get("power", 1))),
+        mode=_KK_MODE_TO_DAIKIN.get(int(state.get("mode", 0)), "auto"),
+        temp_c=int(state.get("temperature", 25)),
+        fan=_KK_WIND_TO_DAIKIN.get(int(state.get("wind_speed", 0)), "auto"),
+        swing=_daikin_swing(int(state.get("lr_wind_mode", 0)), int(state.get("ud_wind_mode", 0))),
+    )
 
 
 def _ac_label(state: dict, function_id: int) -> str:
@@ -148,6 +194,29 @@ class KookongMatchService:
             if name:
                 out[brand_id] = name
         return out
+
+    def _brand_name(self, con: sqlite3.Connection, host, brand_id: str) -> str | None:
+        """Decrypted English brand name for one brand id (None when unknown)."""
+        row = con.execute(
+            "SELECT name FROM RcCountryBrand WHERE brand_id = ? AND lang_code = 'en' LIMIT 1",
+            (brand_id,),
+        ).fetchone()
+        if row is None:
+            row = con.execute(
+                "SELECT name FROM RcCountryBrand WHERE brand_id = ? LIMIT 1",
+                (brand_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        try:
+            return host.decrypt_token(row["name"])
+        except Exception:
+            return None
+
+    def is_daikin_brand(self, category_id: int, brand_id: str) -> bool:
+        """True when this brand needs the native (ESPHome-style) Daikin frame."""
+        con, host = self._ensure()
+        return is_daikin_name(self._brand_name(con, host, brand_id))
 
     # ------------------------------------------------------------------ browsing
 
@@ -363,6 +432,24 @@ class KookongMatchService:
             }
             fid = AC_POWER_FUNCTION if function_id is None else int(function_id)
             label = _ac_label(state, fid)
+            if self.is_daikin_brand(category_id, brand_id):
+                # Daikin units ignore the Kookong Daikin variant (mode byte
+                # 0x40/0x48, fan 0xaf, different fixed frame) but accept the
+                # ESPHome `platform: daikin` frame — verified on real hardware.
+                try:
+                    code = _daikin_code_from_state(state)
+                except Exception:
+                    logger.warning(
+                        "Native Daikin encode failed for remote %s", remote_enc, exc_info=True
+                    )
+                    return None
+                return {
+                    "button_name": label,
+                    "code": code,
+                    "is_ac": True,
+                    "state": state,
+                    "function_id": fid,
+                }
             # Kookong DB lưu token trạng thái power NGƯỢC: token 0 = bật, 1 = tắt.
             # Bằng chứng: frame thật của remote ARC480A33 (bắt qua IR receiver S11) cho
             # cool + power ON -> byte5 = 0x31 (nibble thấp = 1). Nếu truyền thẳng power=1
@@ -460,12 +547,59 @@ class KookongMatchService:
         provider._max_keys = 10**9
         try:
             if int(row["type"] or 0) == 2:
+                if self.is_daikin_brand(category_id, brand_id):
+                    return self._daikin_ac_buttons(provider)
                 return provider._build_ac_buttons(
                     con, host, remote_enc, remote_dec, row, frequency
                 )
             return provider._build_non_ac_buttons(con, host, remote_enc, frequency, row)
         finally:
             provider._max_keys = saved_max_keys
+
+    def _daikin_ac_buttons(self, provider: KookongProvider) -> list[dict]:
+        """State grid for a Daikin AC remote, built by the native encoder.
+
+        Same states and *the same button names* as
+        ``KookongProvider._build_ac_buttons`` (labels run through the same
+        ``standardize_ir_key`` call, so an already-saved device keeps matching),
+        only the frames come from ``ac_native``.  Fan auto + swing off are the
+        defaults for a grid whose labels carry mode/temperature only.
+        """
+        states: list[tuple[int, int, int]] = []
+        if provider._ac_include_off:
+            states.append((0, 0, 24))
+        for mode in provider._ac_modes:
+            for temp in provider._ac_temps:
+                states.append((1, mode, temp))
+
+        buttons: list[dict] = []
+        used_names: set[str] = set()
+        for power, mode, temperature in states:
+            provider._total_keys_seen += 1
+            label = (
+                "Power Off"
+                if not power
+                else f"On {_MODE_LABELS.get(mode, mode)} {temperature}C"
+            )
+            try:
+                code = daikin_code(
+                    power=bool(power),
+                    mode=_KK_MODE_TO_DAIKIN.get(mode, "auto"),
+                    temp_c=temperature,
+                    fan="auto",
+                    swing="off",
+                )
+            except Exception:
+                provider._skip_counts["encode_failed"] = (
+                    provider._skip_counts.get("encode_failed", 0) + 1
+                )
+                continue
+            std = standardize_ir_key(label)
+            if std["name"] in used_names:
+                continue
+            used_names.add(std["name"])
+            buttons.append({"name": std["name"], "icon": std["icon"], "code": code})
+        return buttons
 
 
 _service: KookongMatchService | None = None
